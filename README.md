@@ -91,6 +91,11 @@ bash scripts/local_daily.sh
 Then schedule `scripts/local_daily.sh` with cron or launchd. **Full setup,
 scheduling, and troubleshooting: [`docs/LOCAL_AUTOMATION.md`](docs/LOCAL_AUTOMATION.md).**
 
+**Prefer an always-on box instead of your laptop?** Run it on a small personal
+free-tier cloud VM (recommended if you rarely have a personal machine on) —
+step-by-step provisioning, headless authentication, and a systemd timer are in
+[`docs/CLOUD_VM.md`](docs/CLOUD_VM.md).
+
 ### Alternative: `robin_stocks` (fully headless, unofficial API)
 
 No Claude CLI needed, but it stores credentials locally and uses an unofficial

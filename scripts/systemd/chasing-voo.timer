@@ -1,0 +1,12 @@
+[Unit]
+Description=Run chasing-VOO daily after the US market close
+
+[Timer]
+# Weekdays at 4:15pm New York time (after the 4:00pm close).
+# Requires systemd >= 252 for the timezone suffix; otherwise set the VM's
+# timezone (`sudo timedatectl set-timezone America/New_York`) and drop it.
+OnCalendar=Mon..Fri 16:15 America/New_York
+Persistent=true
+
+[Install]
+WantedBy=timers.target

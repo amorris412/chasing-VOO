@@ -1,0 +1,11 @@
+[Unit]
+Description=chasing-VOO daily portfolio update
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/chasing-VOO
+# Optional: loads PORTFOLIO_PROVIDER / RH_* if you use the robin_stocks method.
+EnvironmentFile=-%h/chasing-VOO/.env
+ExecStart=/bin/bash %h/chasing-VOO/scripts/vm_daily.sh
