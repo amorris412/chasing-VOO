@@ -42,59 +42,86 @@ fair.
 # 1. Install (core + local dashboard)
 pip install -e '.[dashboard]'
 
-# 2. Record today's portfolio value (read it from your brokerage app)
-chasing-voo record --equity 12500.42
+# 2. Connect Robinhood once (OAuth — no password stored). See Automation below.
+claude mcp add robinhood-trading --transport http https://agent.robinhood.com/mcp/trading
+#    then authenticate:  /mcp  ->  robinhood-trading  ->  authenticate
 
-# ...on a day you deposited money, note it so returns stay honest:
-chasing-voo record --equity 13600.00 --flow 1000
+# 3. Record today automatically (schedule this daily — see Automation)
+python -m chasing_voo.auto --equity <equity from the MCP>
 
-# 3. See where you stand
+# 4. See where you stand
 chasing-voo status
 
-# 4. Open the visual dashboard
+# 5. Open the visual (read-only) dashboard
 streamlit run dashboard/app.py
 ```
 
-The dashboard has a sidebar form, so once it's open you can record days there
-instead of the CLI.
+The dashboard is **read-only**. Snapshots are recorded automatically (see
+Automation below) — there is no manual data entry.
 
 ---
 
-## Getting your portfolio value in
+## Automation (no manual entry)
 
-You choose how much automation you want. **Manual is the default and the safest
-— no credentials, nothing that can leak or break.**
-
-### 1. Manual (default, recommended)
-
-Read the number off your brokerage app and enter it via `chasing-voo record`
-or the dashboard sidebar. Takes five seconds a day.
-
-### 2. Official Robinhood MCP (automation, no stored password)
-
-Robinhood publishes an official, OAuth-based MCP server. In a Claude Code
-session you can add it and let the agent read your equity, then record it — no
-password ever stored in this project:
+The daily updater is a single, non-interactive entrypoint:
 
 ```bash
-claude mcp add robinhood-trading --transport http https://agent.robinhood.com/mcp/trading
-# then in the CLI:  /mcp  -> select robinhood-trading -> authenticate
+# Equity supplied by an agent/MCP (recommended — no stored credentials):
+python -m chasing_voo.auto --equity 12500.42
+
+# Or fully headless via a configured provider:
+PORTFOLIO_PROVIDER=robinhood python -m chasing_voo.auto
 ```
 
-Ask the agent to fetch your portfolio equity and run
-`chasing-voo record --equity <that value>`. This keeps auth inside Robinhood's
-OAuth flow rather than in a config file.
+It records one snapshot for today (VOO close fetched automatically) and exits
+0 on success, so it drops straight into any scheduler.
 
-### 3. `robin_stocks` auto-fetch (optional, advanced)
+### Recommended: official Robinhood MCP (OAuth, no stored password)
 
-An unofficial API. Convenient but riskier — see the security notes below.
+Robinhood publishes an official, OAuth-based MCP server. An agent reads your
+equity over OAuth and passes the number to the updater — **no password is ever
+stored in this project**.
+
+```bash
+# One-time setup:
+claude mcp add robinhood-trading --transport http https://agent.robinhood.com/mcp/trading
+# then authenticate once:  /mcp  ->  robinhood-trading  ->  authenticate
+```
+
+To run it unattended, schedule a headless agent call daily (e.g. via cron or a
+scheduled Claude run) that fetches equity from the `robinhood-trading` MCP and
+pipes it into the updater:
+
+```bash
+claude -p "Read my total portfolio equity from the robinhood-trading MCP, then \
+run: python -m chasing_voo.auto --equity <that number>"
+```
+
+The OAuth token is cached and refreshed, so after the one-time authentication
+this runs without prompts. If the token ever expires you re-authenticate once
+with `/mcp`.
+
+### Alternative: `robin_stocks` (fully headless, unofficial API)
+
+No agent needed, but it stores credentials locally and uses an unofficial API
+— see the security notes.
 
 ```bash
 pip install -e '.[robinhood]'
-cp .env.example .env          # then fill in RH_* values in .env (never commit it)
-# set PORTFOLIO_PROVIDER=robinhood in .env
-chasing-voo fetch
+cp .env.example .env               # fill in RH_* values (never commit .env)
+# set PORTFOLIO_PROVIDER=robinhood in .env, then schedule:
+python -m chasing_voo.auto
 ```
+
+### Scheduling examples
+
+```cron
+# crontab -e — weekdays at 4:30pm ET, after market close (adjust for your TZ)
+30 16 * * 1-5  cd /path/to/chasing-VOO && /path/to/python -m chasing_voo.auto --equity ...
+```
+
+On macOS a launchd agent works the same way. The updater is idempotent — one
+row per day — so re-running is safe.
 
 ---
 

@@ -11,16 +11,12 @@ benchmark (VOO by default).
 
 from __future__ import annotations
 
-from datetime import date
-
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from chasing_voo.benchmark import close_on, latest_close
 from chasing_voo.config import Config
 from chasing_voo.metrics import summarize, to_frame
-from chasing_voo.models import Snapshot
 from chasing_voo.storage import Storage
 
 # --- Palette (colorblind-safe, works on light or dark) -----------------------
@@ -35,12 +31,6 @@ BENCH = cfg.benchmark_ticker
 st.set_page_config(page_title="chasing-VOO", page_icon="📈", layout="wide")
 
 
-@st.cache_data(ttl=300)
-def _bench_close_cached(ticker: str, day: date):
-    close = close_on(ticker, day)
-    return close if close is not None else latest_close(ticker)
-
-
 def load_frame() -> pd.DataFrame:
     with Storage(cfg.db_path) as store:
         snaps = store.all()
@@ -53,51 +43,28 @@ summary = summarize(snaps)
 st.title("📈 chasing-VOO")
 st.caption(f"Are you beating the index? Benchmark: **{BENCH}** · Data: `{cfg.db_path}`")
 
-# --- Sidebar: record a day ---------------------------------------------------
+# --- Sidebar: read-only automation status ------------------------------------
 with st.sidebar:
-    st.header("Record a day")
-    st.write("Read your total portfolio value from your brokerage app and enter it.")
-    with st.form("record_form"):
-        r_date = st.date_input("Date", value=date.today())
-        r_equity = st.number_input("Portfolio value ($)", min_value=0.0, step=100.0, format="%.2f")
-        r_flow = st.number_input(
-            "Net deposits that day ($)",
-            value=0.0,
-            step=100.0,
-            format="%.2f",
-            help="Money you moved IN (or out, negative) that day. Keeps returns honest.",
-        )
-        submitted = st.form_submit_button("Save")
-    if submitted:
-        if r_equity <= 0:
-            st.error("Enter a portfolio value greater than 0.")
-        else:
-            try:
-                close = _bench_close_cached(BENCH, r_date)
-                with Storage(cfg.db_path) as store:
-                    store.upsert(
-                        Snapshot(
-                            day=r_date,
-                            equity=float(r_equity),
-                            benchmark_close=float(close),
-                            net_flow=float(r_flow),
-                        )
-                    )
-                st.success(f"Saved {r_date}. {BENCH} close ${close:,.2f}.")
-                st.cache_data.clear()
-                st.rerun()
-            except Exception as exc:
-                st.error(f"Could not save: {exc}")
-
+    st.header("Automation")
+    st.write(
+        "Snapshots are recorded **automatically** — no manual entry. The daily "
+        "updater reads your portfolio value and appends a row."
+    )
     st.divider()
+    st.metric("Days tracked", summary.days_tracked)
+    st.metric("Last recorded", summary.latest_day or "—")
+    st.caption(f"Source: `{cfg.provider}` · Benchmark: `{BENCH}`")
     st.caption(
-        "Prefer automation? See the README for the optional Robinhood provider "
-        "or the official Robinhood MCP path."
+        "Refresh on demand from the project root:\n\n"
+        "`python -m chasing_voo.auto`"
     )
 
 # --- Empty state -------------------------------------------------------------
 if summary.days_tracked == 0:
-    st.info("No data yet. Use **Record a day** in the sidebar to add your first entry.")
+    st.info(
+        "No data yet. The automated updater populates this on its first run — "
+        "see **README → Automation**."
+    )
     st.stop()
 
 
