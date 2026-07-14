@@ -2,21 +2,23 @@
 
 *Are you actually beating the index?*
 
-A small, local, privacy-first tool that tracks your portfolio against a market
-index (**VOO** — Vanguard's S&P 500 ETF — by default) and answers the only
-question that matters for a stock-picker: **am I beating the market, and how
-often?**
+A small, local, privacy-first tool that tracks your portfolio against the major
+market indices — **S&P 500 (VOO)**, **Dow (DIA)**, and **Nasdaq (QQQ)** — and
+answers the only question that matters for a stock-picker: **am I beating the
+market, and how often?**
 
-It records a daily snapshot of your portfolio value, pulls the benchmark's
-close, and computes:
+It records a daily snapshot of your portfolio value, pulls each index's close,
+and computes, for any date range:
 
-- **Daily result** — did you beat the index today?
-- **Win rate** — the share of days you out-return the index.
-- **Cumulative return** — you vs the index since day one.
-- **Lead / lag** — how far ahead of (or behind) the index you are overall.
+- **Daily result** — did you beat each index today?
+- **Win rate** — the share of days you out-return each index.
+- **Cumulative return** — you vs each index over the selected window.
+- **Lead / lag** — how far ahead of (or behind) each index you are.
 
-Everything runs on your machine. Your financial history lives in a local SQLite
-file that is **never** committed or sent anywhere.
+The dashboard lets you **toggle which indices** to compare against and pick a
+**date range** (last 7 / 30 / 90 days, all time, or custom). Everything runs on
+your machine; your financial history lives in a local SQLite file that is
+**never** committed or sent anywhere.
 
 ---
 
@@ -147,9 +149,11 @@ All config is via environment variables (optionally a local `.env`). See
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `BENCHMARK_TICKER` | `VOO` | Index to beat (e.g. `SPY`, `QQQ`, `VTI`). |
+| `BENCHMARK_TICKERS` | `VOO,DIA,QQQ` | Indices to compare against (comma-separated). |
 | `PORTFOLIO_PROVIDER` | `manual` | `manual` or `robinhood`. |
 | `CHASING_VOO_DB` | `data/chasing_voo.sqlite3` | Local database path. |
+| `CHASING_VOO_EQUITY` | — | Portfolio value for a headless run (see Automation). |
+| `CHASING_VOO_BENCHMARKS` | — | Index closes, e.g. `VOO=689.62,DIA=523.27,QQQ=718.42`. |
 | `RH_USERNAME` / `RH_PASSWORD` | — | Only for the `robinhood` provider. |
 | `RH_MFA_CODE` / `RH_TOTP_SECRET` | — | MFA for the `robinhood` provider. |
 

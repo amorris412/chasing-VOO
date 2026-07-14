@@ -12,13 +12,15 @@
 #     scripts/cloud_update.sh
 #
 # Env vars:
-#   EQUITY          (required) total portfolio value in USD
-#   BENCHMARK_CLOSE (optional) VOO price; if set, skips the Yahoo fetch. Supply
-#                   this from the same broker/MCP that gave you EQUITY so the
-#                   run needs no external market-data call.
-#   FLOW            (optional) net deposits that day in USD (default 0)
-#   DATA_REPO_DIR   (required) path to a checkout of the PRIVATE data repo
-#   DATE            (optional) YYYY-MM-DD (default: today)
+#   EQUITY        (required) total portfolio value in USD
+#   BENCHMARKS    (optional) comma list of index closes, e.g.
+#                 "VOO=689.62,DIA=523.27,QQQ=718.42". Supply these from the same
+#                 broker/MCP that gave you EQUITY so the run needs no external
+#                 market-data call. Any configured index left out is fetched
+#                 from Yahoo instead.
+#   FLOW          (optional) net deposits that day in USD (default 0)
+#   DATA_REPO_DIR (required) path to a checkout of the PRIVATE data repo
+#   DATE          (optional) YYYY-MM-DD (default: today)
 #
 set -euo pipefail
 
@@ -29,13 +31,15 @@ FLOW="${FLOW:-0}"
 # Store the database inside the private data repo.
 export CHASING_VOO_DB="${DATA_REPO_DIR}/chasing_voo.sqlite3"
 
+# Pass benchmark prices to the updater via its env var.
+[[ -n "${BENCHMARKS:-}" ]] && export CHASING_VOO_BENCHMARKS="${BENCHMARKS}"
+
 # Get the latest data before appending (avoid clobbering a prior run).
 git -C "${DATA_REPO_DIR}" pull --ff-only origin main >/dev/null 2>&1 || true
 
-# Record the snapshot. Pass the benchmark price through if supplied.
+# Record the snapshot.
 EXTRA_ARGS=()
 [[ -n "${DATE:-}" ]] && EXTRA_ARGS+=(--date "${DATE}")
-[[ -n "${BENCHMARK_CLOSE:-}" ]] && EXTRA_ARGS+=(--benchmark-close "${BENCHMARK_CLOSE}")
 python -m chasing_voo.auto --equity "${EQUITY}" --flow "${FLOW}" "${EXTRA_ARGS[@]}"
 
 # Also write a human-readable CSV so the history is diff-friendly in git.
