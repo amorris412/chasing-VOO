@@ -1,5 +1,11 @@
 # Automation architecture (cloud)
 
+> **Note:** The *recommended* path is **local** automation — see
+> [`LOCAL_AUTOMATION.md`](LOCAL_AUTOMATION.md). A cloud schedule cannot hold the
+> Robinhood OAuth connector session, so it can't fetch unattended. This document
+> describes the cloud/two-repo design for reference (e.g. if you pair it with the
+> headless `robin_stocks` provider, which *does* run unattended in the cloud).
+
 Fully hands-off tracking, no manual entry. Here's how the pieces fit together
 and why the data is split across two repos.
 

@@ -65,48 +65,36 @@ Automation below) — there is no manual data entry.
 
 ## Automation (no manual entry)
 
-The daily updater is a single, non-interactive entrypoint:
+The daily updater is a single, non-interactive entrypoint that records one
+idempotent snapshot and exits 0, so it drops into any scheduler:
 
 ```bash
-# Equity supplied by an agent/MCP (recommended — no stored credentials):
-python -m chasing_voo.auto --equity 12500.42
-
-# Or fully headless via a configured provider:
-PORTFOLIO_PROVIDER=robinhood python -m chasing_voo.auto
+python -m chasing_voo.auto --equity 12500.42 \
+  --benchmark VOO=689.62 --benchmark DIA=523.27 --benchmark QQQ=718.42
 ```
 
-It records one snapshot for today (VOO close fetched automatically) and exits
-0 on success, so it drops straight into any scheduler.
+### Recommended: local, via the Robinhood MCP (OAuth, no stored password)
 
-### Recommended: official Robinhood MCP (OAuth, no stored password)
-
-Robinhood publishes an official, OAuth-based MCP server. An agent reads your
-equity over OAuth and passes the number to the updater — **no password is ever
-stored in this project**.
+Run it on **your machine** with a headless Claude Code call that reads your
+equity + index closes from the official Robinhood MCP — **no password stored,
+and your data never leaves your computer**. This is the reliable hands-off path
+(a *cloud* schedule can't hold the OAuth session; a local one can).
 
 ```bash
-# One-time setup:
+# one-time
 claude mcp add robinhood-trading --transport http https://agent.robinhood.com/mcp/trading
-# then authenticate once:  /mcp  ->  robinhood-trading  ->  authenticate
+claude          # then:  /mcp -> robinhood-trading -> authenticate
+# test it
+bash scripts/local_daily.sh
 ```
 
-To run it unattended, schedule a headless agent call daily (e.g. via cron or a
-scheduled Claude run) that fetches equity from the `robinhood-trading` MCP and
-pipes it into the updater:
-
-```bash
-claude -p "Read my total portfolio equity from the robinhood-trading MCP, then \
-run: python -m chasing_voo.auto --equity <that number>"
-```
-
-The OAuth token is cached and refreshed, so after the one-time authentication
-this runs without prompts. If the token ever expires you re-authenticate once
-with `/mcp`.
+Then schedule `scripts/local_daily.sh` with cron or launchd. **Full setup,
+scheduling, and troubleshooting: [`docs/LOCAL_AUTOMATION.md`](docs/LOCAL_AUTOMATION.md).**
 
 ### Alternative: `robin_stocks` (fully headless, unofficial API)
 
-No agent needed, but it stores credentials locally and uses an unofficial API
-— see the security notes.
+No Claude CLI needed, but it stores credentials locally and uses an unofficial
+API — see the security notes.
 
 ```bash
 pip install -e '.[robinhood]'
@@ -114,16 +102,6 @@ cp .env.example .env               # fill in RH_* values (never commit .env)
 # set PORTFOLIO_PROVIDER=robinhood in .env, then schedule:
 python -m chasing_voo.auto
 ```
-
-### Scheduling examples
-
-```cron
-# crontab -e — weekdays at 4:30pm ET, after market close (adjust for your TZ)
-30 16 * * 1-5  cd /path/to/chasing-VOO && /path/to/python -m chasing_voo.auto --equity ...
-```
-
-On macOS a launchd agent works the same way. The updater is idempotent — one
-row per day — so re-running is safe.
 
 ---
 
