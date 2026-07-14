@@ -1,0 +1,40 @@
+# --- Secrets: NEVER commit these ---------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+secrets.*
+
+# --- Local data (your financial history stays on your machine) ---------------
+data/*
+!data/.gitkeep
+*.sqlite3
+*.sqlite
+*.db
+*.csv
+!tests/**/*.csv
+
+# --- Python ------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Streamlit ---------------------------------------------------------------
+.streamlit/secrets.toml
+
+# --- OS / editor -------------------------------------------------------------
+.DS_Store
+.idea/
+.vscode/
+*.swp

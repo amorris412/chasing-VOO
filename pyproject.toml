@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chasing-voo"
+version = "0.1.0"
+description = "Track whether your portfolio is beating the index (VOO by default)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "pandas>=2.0",
+    "yfinance>=0.2.40",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+# Local interactive dashboard.
+dashboard = [
+    "streamlit>=1.30",
+    "plotly>=5.18",
+]
+# Optional automated Robinhood equity fetch (unofficial API — see README).
+robinhood = [
+    "robin_stocks>=3.0",
+    "pyotp>=2.9",
+]
+# Development / testing.
+dev = [
+    "pytest>=7.4",
+]
+
+[project.scripts]
+chasing-voo = "chasing_voo.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["chasing_voo*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
