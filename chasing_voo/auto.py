@@ -60,9 +60,17 @@ def _benchmark_close_for(cfg: Config, day: date) -> float:
     return close if close is not None else latest_close(cfg.benchmark_ticker)
 
 
-def run(cfg: Config, equity: Optional[float], flow: float, day: date) -> Snapshot:
+def run(
+    cfg: Config,
+    equity: Optional[float],
+    flow: float,
+    day: date,
+    benchmark_close: Optional[float] = None,
+) -> Snapshot:
     resolved = _resolve_equity(cfg, equity)
-    close = _benchmark_close_for(cfg, day)
+    # Use an explicitly supplied benchmark price (e.g. from the same broker/MCP
+    # that gave us equity) when available; otherwise fetch it from Yahoo.
+    close = float(benchmark_close) if benchmark_close is not None else _benchmark_close_for(cfg, day)
     snap = Snapshot(day=day, equity=resolved, benchmark_close=close, net_flow=flow)
     with Storage(cfg.db_path) as store:
         store.upsert(snap)
@@ -77,12 +85,22 @@ def main(argv: Optional[list] = None) -> int:
     parser.add_argument("--equity", type=float, default=None, help="Portfolio value in USD")
     parser.add_argument("--flow", type=float, default=0.0, help="Net deposits that day (USD)")
     parser.add_argument("--date", default=None, help="Date YYYY-MM-DD (default: today)")
+    parser.add_argument(
+        "--benchmark-close",
+        type=float,
+        default=None,
+        help="Benchmark price to use (skips the Yahoo fetch). Also reads "
+        "CHASING_VOO_BENCHMARK_CLOSE if set.",
+    )
     args = parser.parse_args(argv)
 
     cfg = Config.load()
     day = datetime.strptime(args.date, "%Y-%m-%d").date() if args.date else date.today()
+    bench_close = args.benchmark_close
+    if bench_close is None and os.getenv("CHASING_VOO_BENCHMARK_CLOSE"):
+        bench_close = float(os.environ["CHASING_VOO_BENCHMARK_CLOSE"])
     try:
-        snap = run(cfg, args.equity, float(args.flow), day)
+        snap = run(cfg, args.equity, float(args.flow), day, benchmark_close=bench_close)
     except Exception as exc:
         print(f"chasing-voo auto: FAILED — {exc}", file=sys.stderr)
         return 1
