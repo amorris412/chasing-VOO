@@ -1,0 +1,14 @@
+[Unit]
+Description=chasing-VOO dashboard (Streamlit) - always-on, localhost only
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/chasing-VOO
+Environment=CHASING_VOO_DB=%h/chasing-VOO-data/chasing_voo.sqlite3
+ExecStart=%h/chasing-VOO/.venv/bin/streamlit run dashboard/app.py --server.address 127.0.0.1 --server.headless true
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
